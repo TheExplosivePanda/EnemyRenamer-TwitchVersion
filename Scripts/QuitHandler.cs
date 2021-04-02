@@ -9,7 +9,7 @@ namespace EnemyRenamerTwitch
 {
     class QuitHandler : MonoBehaviour
     {
-        //makes sure tp kill the listener when the game is exites, otherwise game crashes. is only needed because ETGModule.Exit does not work for whatever reason
+        //makes sure tp kill the listener when the game  exits, otherwise game crashes. is only needed because ETGModule.Exit does not work for whatever reason
         void OnApplicationQuit()
         {
             if (TwitchRenamerModule.listener != null)
