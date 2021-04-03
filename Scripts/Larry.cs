@@ -44,7 +44,7 @@ namespace EnemyRenamerTwitch
             nameLabel.gameObject.SetActive(true);
             nameLabel.Text = Name;
             nameLabel.Color = Color.HSVToRGB(UnityEngine.Random.value, 1.0f, 1.0f);
-            nameLabel.Opacity = 1f;
+            nameLabel.Opacity = 0.95f;
             nameLabel.transform.position = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
             nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
 
@@ -52,13 +52,16 @@ namespace EnemyRenamerTwitch
             {
                 GameObject SpeechObj = (GameObject)UnityEngine.Object.Instantiate(BraveResources.Load("DamagePopupLabel", ".prefab"), GameUIRoot.Instance.transform);
                 SpeechBubble = SpeechObj.GetComponent<dfLabel>();
+                SpeechBubble.Color = nameLabel.Color;
                 SpeechBubble.Text = "";
+                SpeechBubble.Opacity = 0.9f;
             }
             
             nameXoffset = nameLabel.GetCenter().x - nameLabel.transform.position.x;
         }
         /// <summary>
         /// updates the position of the nameLabel every frame using the sprite bottom center  and offset for centering, if no sprite exists, uses game objects position
+        /// also updates speechbubble position
         /// checks if the messge queue has any messeges in it running and if the MessegePop coroutine is running.
         /// if there are messeges pending and the coroutine isnt running, pops a new messege
         /// </summary>
@@ -68,15 +71,25 @@ namespace EnemyRenamerTwitch
             if (sprite != null)
             {
                 worldPosition = sprite.WorldBottomCenter;
-                
+                if (SpeechBubble != null)
+                {
+                    SpeechBubble.transform.position = dfFollowObject.ConvertWorldSpaces(sprite.WorldTopLeft, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
+                    SpeechBubble.transform.position = SpeechBubble.transform.position.WithX(SpeechBubble.transform.position.x - (SpeechBubble.GetCenter().x -SpeechBubble.transform.position.x)  );
+                    SpeechBubble.transform.position = SpeechBubble.transform.position.WithY(SpeechBubble.transform.position.y + 0.0625f*2f);
+                    SpeechBubble.transform.position = SpeechBubble.transform.position.QuantizeFloor(SpeechBubble.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
+                }               
             }
             if (messegeQueue.Count != 0 && !isCoroutineRunning)
             {
                 HandleSpeakInternal(messegeQueue.Dequeue());
             }
-            Vector2 tempPos = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
-            nameLabel.transform.position = tempPos.WithX(tempPos.x - nameXoffset);
-            nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
+            if (nameLabel)
+            {
+                Vector2 tempPos = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
+                nameLabel.transform.position = tempPos.WithX(tempPos.x - nameXoffset);
+                nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
+               
+            }
         }
         /// <summary>
         /// stops all corotines, removes this game object from the list of game objects that can have a messege pusehd on to them, abd destroyes both name and speech labels
@@ -107,20 +120,38 @@ namespace EnemyRenamerTwitch
         /// <param name="text">text to be "popped"</param>
         private void HandleSpeakInternal(string text)
         {
-            if (text.Length > 10)
+            if (text.Length > 20)
             {
-                text = text.Substring(9) + "...";
+                text = text.Substring(0,24) + "...";
             }
             if (SpeechBubble != null)
             {
-                coroutine = MessegePop(this.gameObject.transform.position, 1, text);
+                //coroutine = MessegePop(this.gameObject.transform.position,1,text);
+                coroutine = MessegeHover(text);
                 StartCoroutine(coroutine);
                 isCoroutineRunning = true;
             }
         }
         /// <summary>
-        /// coroutine takes from base game code, takes text and makes it fly up and fall down similiarly to scouters damage indicators.
-        /// in this case slightly modified to only use SpeechLabel, and to set isCoroutineRunning to false at the end
+        /// makes the speech label show some text for 3 seconds
+        /// </summary>
+        /// <param name="text"> text to show</param>
+        /// <returns></returns>
+        private IEnumerator MessegeHover(string text)
+        {
+            isCoroutineRunning = true;
+            if (SpeechBubble!= null)
+            {
+                SpeechBubble.Text = text;
+                yield return new WaitForSecondsRealtime(3);
+                SpeechBubble.Text = "";
+            }
+            yield return null;
+            isCoroutineRunning = false;
+        }
+        /// <summary>
+        /// UNUSED coroutine takes from base game code, takes text and makes it fly up and fall down similiarly to scouters damage indicators.
+        /// in this case slightly modified to only use SpeechLabel, and to set isCoroutineRunning to false at the end.
         /// </summary>
         /// <param name="startWorldPosition">where to be popped</param>
         /// <param name="worldFloorHeight">height off floor, works with 1, should probably figure it out properly sometimes</param>
