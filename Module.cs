@@ -13,18 +13,23 @@ namespace EnemyRenamerTwitch
     public class TwitchRenamerModule : ETGModule
     {
         public static readonly string MOD_NAME = "Enemy Renamer Mod Twitch Version";
-        public static readonly string VERSION = "0.0.0";
+        public static readonly string VERSION = "0.0.2";
         public static readonly string TEXT_COLOR = "#00FFFF";
         /// <summary>
         /// initilizes most variables from files,adds commands, initializes the GiveName event, and attaches a quit handler to the game's main game manager
         /// </summary>
         public override void Start()
         {
+           
             GameManager.Instance.gameObject.AddComponent<QuitHandler>();
             Settings.LoadInfo();
             
-            ETGModConsole.Commands.AddUnit("RenamerTwitch", new Action<string[]>(this.ToggleIntegration));
-            ETGModConsole.Commands.AddUnit("RenamerMsg", new Action<string[]>(this.ToggleSpeech));
+            ETGModConsole.Commands.AddGroup("renamer:twitch", new Action<string[]>(this.ToggleIntegration));
+            ETGModConsole.Commands.AddGroup("renamer:msg", new Action<string[]>(this.ToggleSpeech));
+            ETGModConsole.Commands.AddGroup("renamer:namesize", new Action<string[]>(this.ChangeNameSize));
+            ETGModConsole.Commands.AddGroup("renamer:msgsize", new Action<string[]>(this.ChangeMsgSize));
+            ETGModConsole.Commands.AddGroup("renamer:msglength", new Action<string[]>(this.SetMsgLengthLimit));
+            ETGModConsole.Commands.AddGroup("renamer:clear", new Action<string[]>(this.ClearAllNames));
 
             ETGMod.AIActor.OnPostStart += GiveName;
             Log($"{MOD_NAME} v{VERSION} started successfully.", TEXT_COLOR);
@@ -34,12 +39,83 @@ namespace EnemyRenamerTwitch
         {
             ETGModConsole.Log($"<color={color}>{text}</color>");
         }
+        public void ChangeMsgSize(string[] args)
+        {
+            if (args != null &&args.Length == 1)
+            {
+                float size = 1;
+                bool success = float.TryParse(args[0], out size);
+                if (success)
+                {
+                    Larry.msgSize = size;
+                    ETGModConsole.Log("messeges from now on will be size = " + Larry.msgSize);
+                }
+                else
+                {
+                    ETGModConsole.Log("incroeect format, make sure to input a number");
+                }
+            }
+            else
+            {
+                ETGModConsole.Log("incorrect amount of arguments. one argument required");
+            }
+        }
+        public void ChangeNameSize(string[] args)
+        {
+            if (args != null && args.Length == 1)
+            {
+                float size = 1;
+                bool success = float.TryParse(args[0], out size);
+                if (success)
+                {
+                    Larry.nameSize = size;
+                    ETGModConsole.Log("names from now on will be size = " + Larry.msgSize);
+                }
+                else
+                {
+                    ETGModConsole.Log("incroeect format, make sure to input a number");
+                }
+            }
+            else
+            {
+                ETGModConsole.Log("incorrect amount of arguments. one argument required");
+            }
+        }
+        public void ClearAllNames(string[] args)
+        {
+            Larry.namesDB = new List<string>();
+            Larry.EnemyDictionary = new Dictionary<string, List<Larry>>();
+        }
+        public void SetMsgLengthLimit(string[] args)
+        {
+            if (args != null && args.Length == 1)
+            {
+                int length = 1;
+                bool success = int.TryParse(args[0], out length);
+                if (success)
+                {
+                    Larry.msgLength = length;
+                    ETGModConsole.Log("messeges from now on will be at most " + Larry.msgLength + " characters long");
+                }
+                else
+                {
+                    ETGModConsole.Log("incroeect format, make sure to input a whole number");
+                }
+            }
+            else
+            {
+                ETGModConsole.Log("incorrect amount of arguments. one argument required");
+            }
+        }
 
+        //attaches the "Larry" component to all aiActors
         public static void GiveName(AIActor actor)
         {
-            actor.gameObject.AddComponent<Larry>();
-            
-        }//attaches the "Larry" component to all aiActors
+            if (TwitchRenamerModule.integrationEnabled)
+            {
+                actor.gameObject.AddComponent<Larry>();
+            }
+        }
         //mostly stolen from kyle, but basically tries to load info from file and start listening to chat, or stop listening to chat to disable twitch mod. thanks kyle (:
         public void ToggleIntegration(string[] args)
         {
@@ -60,6 +136,10 @@ namespace EnemyRenamerTwitch
                         TwitchRenamerModule.listener = new ChatListener(Settings.channel, Settings.oauth, Settings.channel);
                         TwitchRenamerModule.listener.Connect();
                         TwitchRenamerModule.listener.OnChatMessage += TwitchRenamerModule.HandleSentMessge;
+                    }
+                    else if(!listener.Connected)
+                    {
+                        listener.Connect();
                     }
                     TwitchRenamerModule.listener.StartListening();                    
                     TwitchRenamerModule.integrationEnabled = true;
