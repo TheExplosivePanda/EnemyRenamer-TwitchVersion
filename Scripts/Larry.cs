@@ -18,6 +18,9 @@ namespace EnemyRenamerTwitch
         float nameXoffset = 0;//offset used to center name label
         IEnumerator coroutine = null;//MessegePop corutine
         bool isCoroutineRunning = false;
+        public static float nameSize = 3;
+        public static float msgSize = 3;
+        public static int msgLength = 25;
         /// <summary>
         /// instnatiates and attaches a name label to the base game object, sets the "sprite" variable, and calculates x offset
         /// gets a random name and color to give the name
@@ -26,11 +29,14 @@ namespace EnemyRenamerTwitch
         /// </summary>
         void Start()
         {
-            string Name = "HI IM LARRY";
+            string Name = "NamerMod:NoNamesFound";
             if (namesDB != null && namesDB.Count>0)
             {
                 Name = namesDB[UnityEngine.Random.Range(0,namesDB.Count)];
-                EnemyDictionary[Name].Add(this);
+                if (EnemyDictionary.ContainsKey(Name))
+                {
+                    EnemyDictionary[Name].Add(this);
+                }               
             }
             
             
@@ -40,14 +46,14 @@ namespace EnemyRenamerTwitch
             Vector3 worldPosition = this.transform.position;
 
             nameLabel = gameObject.GetComponent<dfLabel>();
-
             nameLabel.gameObject.SetActive(true);
             nameLabel.Text = Name;
             nameLabel.Color = Color.HSVToRGB(UnityEngine.Random.value, 1.0f, 1.0f);
             nameLabel.Opacity = 0.95f;
+            nameLabel.TextScale = nameSize;
             nameLabel.transform.position = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
             nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
-
+           
             if (sprite != null)
             {
                 GameObject SpeechObj = (GameObject)UnityEngine.Object.Instantiate(BraveResources.Load("DamagePopupLabel", ".prefab"), GameUIRoot.Instance.transform);
@@ -55,6 +61,7 @@ namespace EnemyRenamerTwitch
                 SpeechBubble.Color = nameLabel.Color;
                 SpeechBubble.Text = "";
                 SpeechBubble.Opacity = 0.9f;
+                SpeechBubble.TextScale = msgSize;
             }
             
             nameXoffset = nameLabel.GetCenter().x - nameLabel.transform.position.x;
@@ -77,6 +84,7 @@ namespace EnemyRenamerTwitch
                     SpeechBubble.transform.position = SpeechBubble.transform.position.WithX(SpeechBubble.transform.position.x - (SpeechBubble.GetCenter().x -SpeechBubble.transform.position.x)  );
                     SpeechBubble.transform.position = SpeechBubble.transform.position.WithY(SpeechBubble.transform.position.y + 0.0625f*2f);
                     SpeechBubble.transform.position = SpeechBubble.transform.position.QuantizeFloor(SpeechBubble.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
+                    SpeechBubble.IsVisible = !GameManager.Instance.IsPaused;
                 }               
             }
             if (messegeQueue.Count != 0 && !isCoroutineRunning)
@@ -88,7 +96,7 @@ namespace EnemyRenamerTwitch
                 Vector2 tempPos = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
                 nameLabel.transform.position = tempPos.WithX(tempPos.x - nameXoffset);
                 nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
-               
+                nameLabel.IsVisible = !GameManager.Instance.IsPaused;
             }
         }
         /// <summary>
@@ -120,9 +128,9 @@ namespace EnemyRenamerTwitch
         /// <param name="text">text to be "popped"</param>
         private void HandleSpeakInternal(string text)
         {
-            if (text.Length > 20)
+            if (text.Length > msgLength)
             {
-                text = text.Substring(0,24) + "...";
+                text = text.Substring(0,msgLength-1) + "...";
             }
             if (SpeechBubble != null)
             {
