@@ -13,7 +13,7 @@ namespace EnemyRenamerTwitch
     public class TwitchRenamerModule : ETGModule
     {
         public static readonly string MOD_NAME = "Enemy Renamer Mod Twitch Version";
-        public static readonly string VERSION = "0.0.2";
+        public static readonly string VERSION = "0.0.4";
         public static readonly string TEXT_COLOR = "#00FFFF";
         /// <summary>
         /// initilizes most variables from files,adds commands, initializes the GiveName event, and attaches a quit handler to the game's main game manager
@@ -30,6 +30,7 @@ namespace EnemyRenamerTwitch
             ETGModConsole.Commands.AddGroup("renamer:msgsize", new Action<string[]>(this.ChangeMsgSize));
             ETGModConsole.Commands.AddGroup("renamer:msglength", new Action<string[]>(this.SetMsgLengthLimit));
             ETGModConsole.Commands.AddGroup("renamer:clear", new Action<string[]>(this.ClearAllNames));
+            ETGModConsole.Commands.AddGroup("renamer:addname", new Action<string[]>(this.AddNameManual));
 
             ETGMod.AIActor.OnPostStart += GiveName;
             Log($"{MOD_NAME} v{VERSION} started successfully.", TEXT_COLOR);
@@ -39,20 +40,29 @@ namespace EnemyRenamerTwitch
         {
             ETGModConsole.Log($"<color={color}>{text}</color>");
         }
+        public static event Action onMsgSizeChanged;
         public void ChangeMsgSize(string[] args)
         {
             if (args != null &&args.Length == 1)
             {
-                float size = 1;
+                float size = 3;
                 bool success = float.TryParse(args[0], out size);
                 if (success)
                 {
-                    Larry.msgSize = size;
-                    ETGModConsole.Log("messeges from now on will be size = " + Larry.msgSize);
+                    if (size >= 0)
+                    {
+                        Larry.msgSize = size;
+                        ETGModConsole.Log("messeges from now on will be size = " + Larry.msgSize);
+                        onMsgSizeChanged();
+                    }
+                    else
+                    {
+                        ETGModConsole.Log("size must be a positive number");
+                    }
                 }
                 else
                 {
-                    ETGModConsole.Log("incroeect format, make sure to input a number");
+                    ETGModConsole.Log("incorrect format, make sure to input a number");
                 }
             }
             else
@@ -60,6 +70,7 @@ namespace EnemyRenamerTwitch
                 ETGModConsole.Log("incorrect amount of arguments. one argument required");
             }
         }
+        public static event Action onNameSizeChanged;
         public void ChangeNameSize(string[] args)
         {
             if (args != null && args.Length == 1)
@@ -68,12 +79,21 @@ namespace EnemyRenamerTwitch
                 bool success = float.TryParse(args[0], out size);
                 if (success)
                 {
-                    Larry.nameSize = size;
-                    ETGModConsole.Log("names from now on will be size = " + Larry.msgSize);
+                    
+                    if (size >= 0)
+                    {
+                        Larry.nameSize = size;
+                        ETGModConsole.Log("names from now on will be size = " + Larry.nameSize);
+                        onNameSizeChanged();
+                    }
+                    else
+                    {
+                        ETGModConsole.Log("size must be a positive number");
+                    }
                 }
                 else
                 {
-                    ETGModConsole.Log("incroeect format, make sure to input a number");
+                    ETGModConsole.Log("incorrect format, make sure to input a number");
                 }
             }
             else
@@ -94,12 +114,21 @@ namespace EnemyRenamerTwitch
                 bool success = int.TryParse(args[0], out length);
                 if (success)
                 {
-                    Larry.msgLength = length;
-                    ETGModConsole.Log("messeges from now on will be at most " + Larry.msgLength + " characters long");
+                    
+                    if (length > 0)
+                    {
+                        Larry.msgLength = length;
+                        ETGModConsole.Log("messeges from now on will be at most " + Larry.msgLength + " characters long");
+                    }
+                    else
+                    {
+                        ETGModConsole.Log("length must be 1 or higher ");
+                    }
+
                 }
                 else
                 {
-                    ETGModConsole.Log("incroeect format, make sure to input a whole number");
+                    ETGModConsole.Log("incorrect format, make sure to input a whole number");
                 }
             }
             else
@@ -107,7 +136,23 @@ namespace EnemyRenamerTwitch
                 ETGModConsole.Log("incorrect amount of arguments. one argument required");
             }
         }
-
+        public void AddNameManual(string[] args)
+        {
+            if (args != null && args.Length == 1)
+            {
+                string name = args[0];
+                Larry.EnemyDictionary.Add(name, new List<Larry>());
+                Larry.namesDB.Add(name);
+                ETGModConsole.Log("the name: " + name + " was added to the name database");
+            }
+            else
+            {
+                ETGModConsole.Log("incorrect amount of arguments. one argument required");
+            }
+            
+        }
+       
+        
         //attaches the "Larry" component to all aiActors
         public static void GiveName(AIActor actor)
         {
@@ -154,7 +199,7 @@ namespace EnemyRenamerTwitch
         //disables twitch mod by stopping listening to chat. does not remove existing names from the database. it does stop messeges popping from enemies though.
         public void Disable()
         {
-            if (TwitchRenamerModule.listener != null && TwitchRenamerModule.listener.Connected)
+            if (TwitchRenamerModule.listener != null )
             {
                 TwitchRenamerModule.listener.StopListening();
             }
@@ -199,8 +244,11 @@ namespace EnemyRenamerTwitch
                     list[i].PushMessegeToMessegeQueue(msg);
                 }
             }
+           
         }
-       
+
+         
+
         /// <summary>
         /// logs error to mtg console, and also dumps it to a file
         /// </summary>
@@ -218,7 +266,9 @@ namespace EnemyRenamerTwitch
             ETGModConsole.Log("<color=#FF0000FF>" + error + "</color>", false);
         }
 
-        public override void Exit(){ }
+        public override void Exit(){
+            
+        }
 
         public override void Init() { }
 
