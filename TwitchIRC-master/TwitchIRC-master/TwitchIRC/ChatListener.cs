@@ -136,7 +136,11 @@ namespace TwitchIRC
         /// </summary>
         public void StartListening()
         {
-            readThread.Start();
+            if (readThread.IsAlive)
+            {
+                readThread.Start();
+            }
+           
             pingTimer.Start();
             listening = true;
         }
