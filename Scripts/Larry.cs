@@ -16,6 +16,7 @@ namespace EnemyRenamerTwitch
         tk2dSprite sprite = null;//if sprite exists, its used to center the label under the sprite
         Queue<string> messegeQueue = new Queue<string>();//quque of messeges to be "popped"
         float nameXoffset = 0;//offset used to center name label
+        float msgXoffset = 0;
         IEnumerator coroutine = null;//MessegePop corutine
         bool isCoroutineRunning = false;
         public static float nameSize = 3;
@@ -53,7 +54,7 @@ namespace EnemyRenamerTwitch
             nameLabel.TextScale = nameSize;
             nameLabel.transform.position = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
             nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
-           
+            nameXoffset = nameLabel.GetCenter().x - nameLabel.transform.position.x;
             if (sprite != null)
             {
                 GameObject SpeechObj = (GameObject)UnityEngine.Object.Instantiate(BraveResources.Load("DamagePopupLabel", ".prefab"), GameUIRoot.Instance.transform);
@@ -62,9 +63,27 @@ namespace EnemyRenamerTwitch
                 SpeechBubble.Text = "";
                 SpeechBubble.Opacity = 0.9f;
                 SpeechBubble.TextScale = msgSize;
+
             }
             
-            nameXoffset = nameLabel.GetCenter().x - nameLabel.transform.position.x;
+            
+        }
+        void OnNameSizeChanged()
+        {
+            if (nameLabel != null)
+            {
+                nameLabel.TextScale = nameSize;
+                nameXoffset = nameLabel.GetCenter().x - nameLabel.transform.position.x;
+            }
+            
+        }
+        void OnMsgSizeChanged()
+        {
+            if (SpeechBubble != null)
+            {
+                SpeechBubble.TextScale = msgSize;
+                msgXoffset = SpeechBubble.GetCenter().x - SpeechBubble.transform.position.x;
+            }
         }
         /// <summary>
         /// updates the position of the nameLabel every frame using the sprite bottom center  and offset for centering, if no sprite exists, uses game objects position
@@ -74,6 +93,9 @@ namespace EnemyRenamerTwitch
         /// </summary>
         void Update()
         {
+            TwitchRenamerModule.onMsgSizeChanged += this.OnMsgSizeChanged;
+            TwitchRenamerModule.onNameSizeChanged += this.OnNameSizeChanged;
+            bool visibality = !GameManager.Instance.IsPaused && TwitchRenamerModule.integrationEnabled;
             Vector3 worldPosition = this.transform.position;
             if (sprite != null)
             {
@@ -81,10 +103,10 @@ namespace EnemyRenamerTwitch
                 if (SpeechBubble != null)
                 {
                     SpeechBubble.transform.position = dfFollowObject.ConvertWorldSpaces(sprite.WorldTopLeft, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
-                    SpeechBubble.transform.position = SpeechBubble.transform.position.WithX(SpeechBubble.transform.position.x - (SpeechBubble.GetCenter().x -SpeechBubble.transform.position.x)  );
+                    SpeechBubble.transform.position = SpeechBubble.transform.position.WithX(SpeechBubble.transform.position.x - msgXoffset );
                     SpeechBubble.transform.position = SpeechBubble.transform.position.WithY(SpeechBubble.transform.position.y + 0.0625f*2f);
                     SpeechBubble.transform.position = SpeechBubble.transform.position.QuantizeFloor(SpeechBubble.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
-                    SpeechBubble.IsVisible = !GameManager.Instance.IsPaused;
+                    SpeechBubble.IsVisible = visibality;               
                 }               
             }
             if (messegeQueue.Count != 0 && !isCoroutineRunning)
@@ -96,7 +118,7 @@ namespace EnemyRenamerTwitch
                 Vector2 tempPos = dfFollowObject.ConvertWorldSpaces(worldPosition, GameManager.Instance.MainCameraController.Camera, GameUIRoot.Instance.Manager.RenderCamera).WithZ(0f);
                 nameLabel.transform.position = tempPos.WithX(tempPos.x - nameXoffset);
                 nameLabel.transform.position = nameLabel.transform.position.QuantizeFloor(nameLabel.PixelsToUnits() / (Pixelator.Instance.ScaleTileScale / Pixelator.Instance.CurrentTileScale));
-                nameLabel.IsVisible = !GameManager.Instance.IsPaused;
+                nameLabel.IsVisible = visibality;
             }
         }
         /// <summary>
@@ -147,10 +169,12 @@ namespace EnemyRenamerTwitch
         /// <returns></returns>
         private IEnumerator MessegeHover(string text)
         {
+
             isCoroutineRunning = true;
             if (SpeechBubble!= null)
             {
                 SpeechBubble.Text = text;
+                msgXoffset = SpeechBubble.GetCenter().x - SpeechBubble.transform.position.x;
                 yield return new WaitForSecondsRealtime(3);
                 SpeechBubble.Text = "";
             }
